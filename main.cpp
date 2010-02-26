@@ -1,4 +1,15 @@
-﻿#include <vcl.h>
+﻿/*
+ * This program sorts all items within an ItemGroup of an MSBuild file
+ * first by its BuildOrder and then by its file name.  It has primarily been
+ * developed to simplify version control of Embarcadero RAD Studio project
+ * files.  With every save of the project file RAD Studio permutes the order
+ * of the items randomly leading to unnecessary conflicts in case of a merge.
+ *
+ * This source code comes without any warranty.  Use at your own risk.
+ *
+ * Questions and comments to: christian.gudrian@gmx.de
+ */
+#include <vcl.h>
 #pragma hdrstop
 
 #include <tchar.h>
