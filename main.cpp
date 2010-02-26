@@ -45,11 +45,19 @@ void WriteLn(const String & s) {
    WriteConsole(handle, out.c_str(), out.Length(), 0, 0);
 }
 
+BSTR getAttribute(IXMLDOMNodePtr node, BSTR attrName) {
+   return node->attributes->getNamedItem(attrName)->text;
+}
+
+BSTR getNodeText(IXMLDOMNodePtr node, BSTR nodeName) {
+   return node->selectSingleNode(nodeName)->text;
+}
+
 int compareNodes(IXMLDOMNodePtr node1, IXMLDOMNodePtr node2) {
-   String name1 = node1->attributes->getNamedItem(L"Include")->text;
-   int order1 = StrToInt(node1->selectSingleNode(L"BuildOrder")->text);
-   String name2 = node2->attributes->getNamedItem(L"Include")->text;
-   int order2 = StrToInt(node2->selectSingleNode(L"BuildOrder")->text);
+   String name1 = getAttribute(node1, L"Include");
+   int order1 = StrToInt(getNodeText(node1, L"BuildOrder"));
+   String name2 = getAttribute(node2, L"Include");
+   int order2 = StrToInt(getNodeText(node2, L"BuildOrder"));
 
    if (order1 > order2)
       return 1;
