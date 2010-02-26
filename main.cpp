@@ -141,14 +141,7 @@ int _tmain(int argc, _TCHAR* argv[]) {
       return 1;
    }
 
-#if 0
-   TStringList * files = new TStringList();
-   gatherFiles(*files, argv[1]);
-   normalizeFiles(*files);
-   delete files;
-#else
    normalizeFile(argv[1]);
-#endif
 
    return 0;
 }
