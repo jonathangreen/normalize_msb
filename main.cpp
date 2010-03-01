@@ -134,9 +134,9 @@ void normalizeItemGroup(IXMLDOMDocument2Ptr doc) {
    }
 }
 
-void fail(const String & error) {
+void fail(const String & error, int code = 1) {
    WriteLn(error);
-   exit(1);
+   exit(code);
 }
 
 void normalizeFile(String fileName) {
@@ -150,13 +150,23 @@ void normalizeFile(String fileName) {
 }
 
 void normalizeFiles(TStringList & files) {
-   for (int i = 0; i < files.Count; i++)
+   if (files.Count == 0) {
+      fail("No files found", 2);
+   }
+
+   for (int i = 0; i < files.Count; i++) {
+      String file = files[i];
+      WriteLn(file);
       normalizeFile(files[i]);
+   }
 }
+
+std::auto_ptr<TStringList>filesFromCommandLine(new TStringList());
 
 void addFiles(int argc, _TCHAR * argv[], int startIdx) {
    for (int i = startIdx; i < argc; i++) {
       String file = argv[i];
+      filesFromCommandLine->Add(file);
    }
 }
 
@@ -175,10 +185,10 @@ void findFilesInFolder(const String & folder, const String & mask, TStringList &
    }
 }
 
-void findFilesInSubfolders(const String & folder, const String & mask, TStringList & list) {
+void findFilesRecursively(const String & rootFolder, const String & mask, TStringList & list) {
    TSearchRec sr;
    int attr = faDirectory;
-   String baseFolder = IncludeTrailingBackslash(folder);
+   String baseFolder = IncludeTrailingBackslash(rootFolder);
    if (FindFirst(baseFolder + "*", attr, sr) == 0) {
       do {
          if ((sr.Attr & attr) == sr.Attr) {
@@ -186,7 +196,7 @@ void findFilesInSubfolders(const String & folder, const String & mask, TStringLi
             if (subFolder != "." && subFolder != "..") {
                String newFolder = baseFolder + subFolder;
                findFilesInFolder(newFolder, mask, list);
-               findFilesInSubfolders(newFolder, mask, list);
+               findFilesRecursively(newFolder, mask, list);
             }
          }
       }
@@ -197,14 +207,19 @@ void findFilesInSubfolders(const String & folder, const String & mask, TStringLi
 
 void findFiles(const String & folder, const String & mask, TStringList & list, bool recurse) {
    if (recurse) {
-      findFilesInSubfolders(folder, mask, list);
+      findFilesRecursively(folder, mask, list);
    } else {
       findFilesInFolder(folder, mask, list);
    }
 }
 
 void gatherFiles(TStringList & files, bool recurse) {
-   findFiles(".", "*.cbproj", files, recurse);
+   for (int i = 0; i < filesFromCommandLine->Count; i++) {
+      String path = (*filesFromCommandLine)[i];
+      String folder = ExtractFilePath(path);
+      String file = ExtractFileName(path);
+      findFiles(folder, file, files, recurse);
+   }
 }
 
 const struct option LONG_OPTIONS[] = { {
@@ -215,6 +230,7 @@ const struct option LONG_OPTIONS[] = { {
       0, 0, 0, 0
    }
 };
+
 const char * SHORT_OPTIONS = "rh";
 
 bool recurse = false;
@@ -252,9 +268,9 @@ int _tmain(int argc, _TCHAR* argv[]) {
 
    processOptions(argc, argv);
 
-   std::auto_ptr<TStringList>sl(new TStringList());
-   gatherFiles(*sl, recurse);
-   normalizeFiles(*sl);
+   std::auto_ptr<TStringList>filesToNormalize(new TStringList());
+   gatherFiles(*filesToNormalize, recurse);
+   normalizeFiles(*filesToNormalize);
 
    return 0;
 }
