@@ -20,6 +20,7 @@
 
 #include "MSXML2_TLB.h"
 #include "getopt.h"
+#include "version.h"
 
 // ---------------------------------------------------------------------------
 
@@ -223,6 +224,8 @@ void gatherFiles(TStringList & files, bool recurse) {
 }
 
 const struct option LONG_OPTIONS[] = { {
+      "version", no_argument, 0, 'v'
+   }, {
       "recursive", no_argument, 0, 'r'
    }, {
       "help", no_argument, 0, 'h'
@@ -231,16 +234,25 @@ const struct option LONG_OPTIONS[] = { {
    }
 };
 
-const char * SHORT_OPTIONS = "rh";
+const char * SHORT_OPTIONS = "rhv";
 
 bool recurse = false;
 
+String getProgName() {
+   return ChangeFileExt(ExtractFileName(Application->ExeName), "");
+}
+
 void showUsage() {
-   String progName = ChangeFileExt(ExtractFileName(Application->ExeName), "");
-   WriteLn("Usage: " + progName + " [OPTIONS] FILES");
+   WriteLn("Usage: " + getProgName() + " [OPTIONS] FILES");
    WriteLn("Valid options:");
-   WriteLn("  -h, --help                  Show this information");
+   WriteLn("  -h, --help                  Show this information and exit");
    WriteLn("  -r, --recursive             Recurse into subdirectories");
+   WriteLn("  -v, --version               Show version information and exit");
+}
+
+void showVersion() {
+   WriteLn(getProgName() + " version " + VERSION);
+   exit(0);
 }
 
 void processOptions(int argc, _TCHAR * argv[]) {
@@ -257,6 +269,9 @@ void processOptions(int argc, _TCHAR * argv[]) {
          break;
       case 'h':
          showUsage();
+         exit(0);
+      case 'v':
+         showVersion();
          exit(0);
       }
    }
