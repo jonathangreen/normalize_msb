@@ -18,7 +18,6 @@
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
-			<_TCHARMapping>wchar_t</_TCHARMapping>
 			<LinkPackageStatics>rtl.lib;vcl.lib;xmlrtl.lib</LinkPackageStatics>
 			<OutputExt>exe</OutputExt>
 			<PackageImports>vclx.bpi;vcl.bpi;vclimg.bpi;dbrtl.bpi;Rave77VCL.bpi;bdertl.bpi;rtl.bpi;bcbie.bpi;vclactnband.bpi;xmlrtl.bpi;bcbsmp.bpi;vcldb.bpi;vcldbx.bpi;vcltouch.bpi;dsnap.bpi;dsnapcon.bpi;TeeUI.bpi;TeeDB.bpi;Tee.bpi;adortl.bpi;IndyCore.bpi;IndySystem.bpi;IndyProtocols.bpi;vclribbon.bpi;DbxClientDriver.bpi;DbxCommonDriver.bpi;DBXInterBaseDriver.bpi;DBXMySQLDriver.bpi;dbxcds.bpi;dbexpress.bpi;Jcl.bpi;JclVcl.bpi</PackageImports>
@@ -52,7 +51,6 @@
 			<BCC_SourceDebuggingOn>true</BCC_SourceDebuggingOn>
 			<ILINK_TranslatedLibraryPath>$(BDS)\lib\$(LANGDIR)\debug;$(ILINK_TranslatedLibraryPath)</ILINK_TranslatedLibraryPath>
 		</PropertyGroup>
-		<PropertyGroup Condition="'$(Cfg_1)'!='' And '$(FileToCompile)'=='main.cpp'"/>
 		<PropertyGroup Condition="'$(Cfg_2)'!=''">
 			<Defines>NDEBUG;$(Defines)</Defines>
 			<IntermediateOutputDir>Release</IntermediateOutputDir>
@@ -60,15 +58,19 @@
 			<TASM_Debugging>None</TASM_Debugging>
 			<ILINK_TranslatedLibraryPath>$(BDS)\lib\$(LANGDIR)\release;$(ILINK_TranslatedLibraryPath)</ILINK_TranslatedLibraryPath>
 		</PropertyGroup>
-		<PropertyGroup Condition="'$(Cfg_2)'!='' And '$(FileToCompile)'=='main.cpp'"/>
 		<ItemGroup>
-			<CppCompile Include="main.cpp">
-				<BuildOrder>0</BuildOrder>
-				<OptionOverrides>true</OptionOverrides>
+			<CppCompile Include="getopt.c">
+				<BuildOrder>2</BuildOrder>
+			</CppCompile>
+			<CppCompile Include="getopt1.c">
+				<BuildOrder>4</BuildOrder>
 			</CppCompile>
 			<CppCompile Include="MSXML2_TLB.cpp">
 				<DependentOn>MSXML2_TLB.h</DependentOn>
 				<BuildOrder>1</BuildOrder>
+			</CppCompile>
+			<CppCompile Include="main.cpp">
+				<BuildOrder>0</BuildOrder>
 			</CppCompile>
 			<BuildConfiguration Include="Base">
 				<Key>Base</Key>
@@ -119,7 +121,7 @@
 						<Debugging Name="DebugSourceDirs"/>
 					</Debugging>
 					<Parameters>
-						<Parameters Name="RunParams"/>
+						<Parameters Name="RunParams">-r *.cbproj</Parameters>
 						<Parameters Name="Launcher"/>
 						<Parameters Name="UseLauncher">True</Parameters>
 						<Parameters Name="DebugCWD"/>

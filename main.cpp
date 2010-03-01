@@ -1,4 +1,4 @@
-﻿/*
+/*
  * This program sorts all items within an ItemGroup of an MSBuild file
  * first by its BuildOrder and then by its file name.  It has primarily been
  * developed to simplify version control of Embarcadero RAD Studio project
@@ -16,8 +16,10 @@
 #include <assert.h>
 
 #include <list>
+#include <memory>
 
 #include "MSXML2_TLB.h"
+#include "getopt.h"
 
 // ---------------------------------------------------------------------------
 
@@ -53,7 +55,7 @@ HANDLE allocHandle() {
 void WriteLn(const String & s) {
    static HANDLE handle = allocHandle();
    String out = s + "\n";
-   WriteConsole(handle, out.c_str(), out.Length(), 0, 0);
+   WriteConsole(handle, out.t_str(), out.Length(), 0, 0);
 }
 
 BSTR getAttribute(IXMLDOMNodePtr node, BSTR attrName) {
@@ -152,15 +154,59 @@ void normalizeFiles(TStringList & files) {
       normalizeFile(files[i]);
 }
 
+void addFiles(int argc, _TCHAR * argv[], int startIdx) {
+   for (int i = startIdx; i < argc; i++) {
+      String file = argv[i];
+   }
+}
+
+const struct option LONG_OPTIONS[] = { {
+      "recursive", no_argument, 0, 'r'
+   }, {
+      "help", no_argument, 0, 'h'
+   }, {
+      0, 0, 0, 0
+   }
+};
+const char * SHORT_OPTIONS = "rh";
+
+bool recurse = false;
+
+void showUsage() {
+   String progName = ChangeFileExt(ExtractFileName(Application->ExeName), "");
+   WriteLn("Usage: " + progName + " [OPTIONS] FILES");
+   WriteLn("Valid options:");
+   WriteLn("  -h, --help                  Show this information");
+   WriteLn("  -r, --recursive             Recurse into subdirectories");
+}
+
+void processOptions(int argc, _TCHAR * argv[]) {
+   int idx = 0;
+   int c = 0;
+   while (c >= 0) {
+      c = getopt_long(argc, argv, SHORT_OPTIONS, LONG_OPTIONS, &idx);
+      switch(c) {
+      case -1
+         : addFiles(argc, argv, optind);
+         break;
+      case 'r':
+         recurse = true;
+         break;
+      case 'h':
+         showUsage();
+         exit(0);
+      }
+   }
+}
+
 static COMHelper comHelper;
 
 int _tmain(int argc, _TCHAR* argv[]) {
-   if (argc == 1) {
-      WriteLn(String("Usage: ") + ExtractFileName(Application->ExeName) + " FILENAME");
-      return 1;
-   }
 
-   normalizeFile(argv[1]);
+   processOptions(argc, argv);
+
+   std::auto_ptr<TStringList>sl(new TStringList());
+   normalizeFiles(*sl);
 
    return 0;
 }
