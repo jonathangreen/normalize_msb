@@ -160,6 +160,53 @@ void addFiles(int argc, _TCHAR * argv[], int startIdx) {
    }
 }
 
+void findFilesInFolder(const String & folder, const String & mask, TStringList & list) {
+   TSearchRec sr;
+   int attr = faAnyFile;
+   String dir = IncludeTrailingBackslash(folder);
+   if (FindFirst(dir + mask, attr, sr) == 0) {
+      do {
+         if ((sr.Attr & attr) == sr.Attr) {
+            list.Add(dir + sr.Name);
+         }
+      }
+      while (FindNext(sr) == 0);
+      FindClose(sr);
+   }
+}
+
+void findFilesInSubfolders(const String & folder, const String & mask, TStringList & list) {
+   TSearchRec sr;
+   int attr = faDirectory;
+   String baseFolder = IncludeTrailingBackslash(folder);
+   if (FindFirst(baseFolder + "*", attr, sr) == 0) {
+      do {
+         if ((sr.Attr & attr) == sr.Attr) {
+            String subFolder = sr.Name;
+            if (subFolder != "." && subFolder != "..") {
+               String newFolder = baseFolder + subFolder;
+               findFilesInFolder(newFolder, mask, list);
+               findFilesInSubfolders(newFolder, mask, list);
+            }
+         }
+      }
+      while (FindNext(sr) == 0);
+      FindClose(sr);
+   }
+}
+
+void findFiles(const String & folder, const String & mask, TStringList & list, bool recurse) {
+   if (recurse) {
+      findFilesInSubfolders(folder, mask, list);
+   } else {
+      findFilesInFolder(folder, mask, list);
+   }
+}
+
+void gatherFiles(TStringList & files, bool recurse) {
+   findFiles(".", "*.cbproj", files, recurse);
+}
+
 const struct option LONG_OPTIONS[] = { {
       "recursive", no_argument, 0, 'r'
    }, {
@@ -206,6 +253,7 @@ int _tmain(int argc, _TCHAR* argv[]) {
    processOptions(argc, argv);
 
    std::auto_ptr<TStringList>sl(new TStringList());
+   gatherFiles(*sl, recurse);
    normalizeFiles(*sl);
 
    return 0;
