@@ -26,6 +26,9 @@
 #include <list>
 #include <memory>
 
+#include <shlwapi.h>
+#undef StrToInt
+
 #include "MSXML2_TLB.h"
 #include "getopt.h"
 #include "version.h"
@@ -113,6 +116,16 @@ void bubbleSortNodes(IXMLDOMNodePtr * nodes, int len) {
    while (swapped && len);
 }
 
+String makeRelativePath(String path) {
+   char buffer[MAX_PATH] = {
+      0
+   };
+   if (PathRelativePathTo(buffer, GetCurrentDir().t_str(), FILE_ATTRIBUTE_DIRECTORY, path.t_str(), 0))
+      return String(buffer);
+   else
+      return path;
+}
+
 IXMLDOMNodePtr * newNodesArray(IXMLDOMNodeListPtr src, int & len) {
    assert(src);
    len = src->length;
@@ -165,7 +178,7 @@ void normalizeFiles(TStringList & files) {
 
    for (int i = 0; i < files.Count; i++) {
       String file = files[i];
-      WriteLn(file);
+      WriteLn(makeRelativePath(file));
       normalizeFile(files[i]);
    }
 }
@@ -180,8 +193,9 @@ void addFiles(int argc, _TCHAR * argv[], int startIdx) {
 }
 
 void findFilesInFolder(const String & folder, const String & mask, TStringList & list) {
-   TSearchRec sr;
    int attr = faAnyFile;
+   TSearchRec sr;
+   memset(&sr, 0, sizeof(sr));
    String dir = IncludeTrailingBackslash(folder);
    if (FindFirst(dir + mask, attr, sr) == 0) {
       do {
@@ -195,18 +209,18 @@ void findFilesInFolder(const String & folder, const String & mask, TStringList &
 }
 
 void findFilesRecursively(const String & rootFolder, const String & mask, TStringList & list) {
-   TSearchRec sr;
-   int attr = faDirectory;
    String baseFolder = IncludeTrailingBackslash(rootFolder);
+   findFilesInFolder(baseFolder, mask, list);
+
+   int attr = faDirectory | faReadOnly;
+   TSearchRec sr;
+   memset(&sr, 0, sizeof(sr));
    if (FindFirst(baseFolder + "*", attr, sr) == 0) {
       do {
          if ((sr.Attr & attr) == sr.Attr) {
             String subFolder = sr.Name;
-            if (subFolder != "." && subFolder != "..") {
-               String newFolder = baseFolder + subFolder;
-               findFilesInFolder(newFolder, mask, list);
-               findFilesRecursively(newFolder, mask, list);
-            }
+            if (subFolder != "." && subFolder != "..")
+               findFilesRecursively(baseFolder + subFolder, mask, list);
          }
       }
       while (FindNext(sr) == 0);
@@ -226,6 +240,8 @@ void gatherFiles(TStringList & files, bool recurse) {
    for (int i = 0; i < filesFromCommandLine->Count; i++) {
       String path = (*filesFromCommandLine)[i];
       String folder = ExtractFilePath(path);
+      if (folder.Length() == 0)
+         folder = GetCurrentDir();
       String file = ExtractFileName(path);
       findFiles(folder, file, files, recurse);
    }
