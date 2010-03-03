@@ -180,8 +180,9 @@ void addFiles(int argc, _TCHAR * argv[], int startIdx) {
 }
 
 void findFilesInFolder(const String & folder, const String & mask, TStringList & list) {
-   TSearchRec sr;
    int attr = faAnyFile;
+   TSearchRec sr;
+   memset(&sr, 0, sizeof(sr));
    String dir = IncludeTrailingBackslash(folder);
    if (FindFirst(dir + mask, attr, sr) == 0) {
       do {
@@ -195,18 +196,18 @@ void findFilesInFolder(const String & folder, const String & mask, TStringList &
 }
 
 void findFilesRecursively(const String & rootFolder, const String & mask, TStringList & list) {
-   TSearchRec sr;
-   int attr = faDirectory;
    String baseFolder = IncludeTrailingBackslash(rootFolder);
+   findFilesInFolder(baseFolder, mask, list);
+
+   int attr = faDirectory | faReadOnly;
+   TSearchRec sr;
+   memset(&sr, 0, sizeof(sr));
    if (FindFirst(baseFolder + "*", attr, sr) == 0) {
       do {
          if ((sr.Attr & attr) == sr.Attr) {
             String subFolder = sr.Name;
-            if (subFolder != "." && subFolder != "..") {
-               String newFolder = baseFolder + subFolder;
-               findFilesInFolder(newFolder, mask, list);
-               findFilesRecursively(newFolder, mask, list);
-            }
+            if (subFolder != "." && subFolder != "..")
+               findFilesRecursively(baseFolder + subFolder, mask, list);
          }
       }
       while (FindNext(sr) == 0);
@@ -226,6 +227,8 @@ void gatherFiles(TStringList & files, bool recurse) {
    for (int i = 0; i < filesFromCommandLine->Count; i++) {
       String path = (*filesFromCommandLine)[i];
       String folder = ExtractFilePath(path);
+      if (folder.Length() == 0)
+         folder = GetCurrentDir();
       String file = ExtractFileName(path);
       findFiles(folder, file, files, recurse);
    }
