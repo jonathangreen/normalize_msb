@@ -26,6 +26,9 @@
 #include <list>
 #include <memory>
 
+#include <shlwapi.h>
+#undef StrToInt
+
 #include "MSXML2_TLB.h"
 #include "getopt.h"
 #include "version.h"
@@ -113,6 +116,16 @@ void bubbleSortNodes(IXMLDOMNodePtr * nodes, int len) {
    while (swapped && len);
 }
 
+String makeRelativePath(String path) {
+   char buffer[MAX_PATH] = {
+      0
+   };
+   if (PathRelativePathTo(buffer, GetCurrentDir().t_str(), FILE_ATTRIBUTE_DIRECTORY, path.t_str(), 0))
+      return String(buffer);
+   else
+      return path;
+}
+
 IXMLDOMNodePtr * newNodesArray(IXMLDOMNodeListPtr src, int & len) {
    assert(src);
    len = src->length;
@@ -165,7 +178,7 @@ void normalizeFiles(TStringList & files) {
 
    for (int i = 0; i < files.Count; i++) {
       String file = files[i];
-      WriteLn(file);
+      WriteLn(makeRelativePath(file));
       normalizeFile(files[i]);
    }
 }
