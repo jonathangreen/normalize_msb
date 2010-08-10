@@ -37,6 +37,8 @@
 
 #pragma argsused
 
+static bool verbose;
+
 class ConsoleHelper
 {
 public:
@@ -287,6 +289,13 @@ void gatherFiles (TStringList & files, bool recurse)
       if (folder.Length() == 0)
          folder = GetCurrentDir();
       String file = ExtractFileName (path);
+      if (verbose)
+      {
+         if (recurse)
+            WriteLn ("Searching recursively for files matching " + file + " starting in directory " + folder);
+         else
+            WriteLn ("Searching for files matching " + file + " in directory " + folder);
+      }
       findFiles (folder, file, files, recurse);
    }
 }
@@ -298,11 +307,14 @@ const struct option LONG_OPTIONS[] = { {
    }, {
       "help", no_argument, 0, 'h'
    }, {
+   }, {
+      "verbose", no_argument, 0, 'V'
+   }, {
       0, 0, 0, 0
    }
 };
 
-const char * SHORT_OPTIONS = "rhv";
+const char * SHORT_OPTIONS = "rhvV";
 
 bool recurse = false;
 
@@ -318,6 +330,7 @@ void showUsage()
    WriteLn ("  -h, --help                  Show this information and exit");
    WriteLn ("  -r, --recursive             Recurse into subdirectories");
    WriteLn ("  -v, --version               Show version information and exit");
+   WriteLn ("  -V, --verbose               Show more output during processing");
 }
 
 void showVersion()
@@ -348,6 +361,9 @@ void processOptions (int argc, _TCHAR * argv[])
          case 'v':
             showVersion();
             exit (0);
+         case 'V':
+            verbose = true;
+            break;
       }
    }
 }
