@@ -37,52 +37,63 @@
 
 #pragma argsused
 
-class ConsoleHelper {
+class ConsoleHelper
+{
 public:
-   ConsoleHelper() {
+   ConsoleHelper()
+   {
       AllocConsole();
    }
 
-   ~ConsoleHelper() {
+   ~ConsoleHelper()
+   {
       FreeConsole();
    }
 };
 
-class COMHelper {
+class COMHelper
+{
 public:
-   COMHelper() {
-      CoInitialize(0);
+   COMHelper()
+   {
+      CoInitialize (0);
    }
 
-   ~COMHelper() {
+   ~COMHelper()
+   {
       CoUninitialize();
    }
 };
 
-HANDLE allocHandle() {
+HANDLE allocHandle()
+{
    static ConsoleHelper helper;
-   return GetStdHandle(STD_OUTPUT_HANDLE);
+   return GetStdHandle (STD_OUTPUT_HANDLE);
 }
 
-void WriteLn(const String & s) {
+void WriteLn (const String & s)
+{
    static HANDLE handle = allocHandle();
    String out = s + "\n";
-   WriteConsole(handle, out.t_str(), out.Length(), 0, 0);
+   WriteConsole (handle, out.t_str(), out.Length(), 0, 0);
 }
 
-BSTR getAttribute(IXMLDOMNodePtr node, BSTR attrName) {
-   return node->attributes->getNamedItem(attrName)->text;
+BSTR getAttribute (IXMLDOMNodePtr node, BSTR attrName)
+{
+   return node->attributes->getNamedItem (attrName)->text;
 }
 
-BSTR getNodeText(IXMLDOMNodePtr node, BSTR nodeName) {
-   return node->selectSingleNode(nodeName)->text;
+BSTR getNodeText (IXMLDOMNodePtr node, BSTR nodeName)
+{
+   return node->selectSingleNode (nodeName)->text;
 }
 
-int compareNodes(IXMLDOMNodePtr node1, IXMLDOMNodePtr node2) {
-   String name1 = getAttribute(node1, L"Include");
-   int order1 = StrToInt(getNodeText(node1, L"BuildOrder"));
-   String name2 = getAttribute(node2, L"Include");
-   int order2 = StrToInt(getNodeText(node2, L"BuildOrder"));
+int compareNodes (IXMLDOMNodePtr node1, IXMLDOMNodePtr node2)
+{
+   String name1 = getAttribute (node1, L"Include");
+   int order1 = StrToInt (getNodeText (node1, L"BuildOrder"));
+   String name2 = getAttribute (node2, L"Include");
+   int order2 = StrToInt (getNodeText (node2, L"BuildOrder"));
 
    if (order1 > order2)
       return 1;
@@ -96,16 +107,20 @@ int compareNodes(IXMLDOMNodePtr node1, IXMLDOMNodePtr node2) {
    return 0;
 }
 
-void bubbleSortNodes(IXMLDOMNodePtr * nodes, int len) {
-   assert(nodes);
+void bubbleSortNodes (IXMLDOMNodePtr * nodes, int len)
+{
+   assert (nodes);
 
    bool swapped;
-   do {
+   do
+   {
       swapped = false;
-      for (int i = 0; i < len - 1; i++) {
+      for (int i = 0; i < len - 1; i++)
+      {
          IXMLDOMNodePtr node1 = nodes[i];
          IXMLDOMNodePtr node2 = nodes[i + 1];
-         if (compareNodes(node1, node2) > 0) {
+         if (compareNodes (node1, node2) > 0)
+         {
             nodes[i] = node2;
             nodes[i + 1] = node1;
             swapped = true;
@@ -116,134 +131,163 @@ void bubbleSortNodes(IXMLDOMNodePtr * nodes, int len) {
    while (swapped && len);
 }
 
-String makeRelativePath(String path) {
-   char buffer[MAX_PATH] = {
+String makeRelativePath (String path)
+{
+   char buffer[MAX_PATH] =
+   {
       0
    };
-   if (PathRelativePathTo(buffer, GetCurrentDir().t_str(), FILE_ATTRIBUTE_DIRECTORY, path.t_str(), 0))
-      return String(buffer);
+   if (PathRelativePathTo (buffer, GetCurrentDir().t_str(), FILE_ATTRIBUTE_DIRECTORY, path.t_str(), 0))
+      return String (buffer);
    else
       return path;
 }
 
-IXMLDOMNodePtr * newNodesArray(IXMLDOMNodeListPtr src, int & len) {
-   assert(src);
+IXMLDOMNodePtr * newNodesArray (IXMLDOMNodeListPtr src, int & len)
+{
+   assert (src);
    len = src->length;
 
-   assert(len);
+   assert (len);
    IXMLDOMNodePtr * result = new IXMLDOMNodePtr[len];
    for (int i = 0; i < len; i++)
-      result[i] = src->get_item(i);
+      result[i] = src->get_item (i);
    return result;
 }
 
-void rewriteNodes(IXMLDOMNodePtr parent, IXMLDOMNodePtr * nodes, int len) {
-   for (int i = 0; i < len; i++) {
-      parent->removeChild(nodes[i]);
-      parent->appendChild(nodes[i]);
+void rewriteNodes (IXMLDOMNodePtr parent, IXMLDOMNodePtr * nodes, int len)
+{
+   for (int i = 0; i < len; i++)
+   {
+      parent->removeChild (nodes[i]);
+      parent->appendChild (nodes[i]);
    }
 }
 
-void normalizeItemGroup(IXMLDOMDocument2Ptr doc) {
-   IXMLDOMNodePtr itemGroup = doc->selectSingleNode(L"/Project/ItemGroup");
-   IXMLDOMNodeListPtr items = itemGroup->selectNodes(L"*[BuildOrder and @Include]");
-   if (items && items->length) {
+void normalizeItemGroup (IXMLDOMDocument2Ptr doc)
+{
+   IXMLDOMNodePtr itemGroup = doc->selectSingleNode (L"/Project/ItemGroup");
+   IXMLDOMNodeListPtr items = itemGroup->selectNodes (L"*[BuildOrder and @Include]");
+   if (items && items->length)
+   {
       int len;
-      IXMLDOMNodePtr * nodes = newNodesArray(items, len);
-      bubbleSortNodes(nodes, len);
-      rewriteNodes(itemGroup, nodes, len);
+      IXMLDOMNodePtr * nodes = newNodesArray (items, len);
+      bubbleSortNodes (nodes, len);
+      rewriteNodes (itemGroup, nodes, len);
       delete[]nodes;
    }
 }
 
-void fail(const String & error, int code = 1) {
-   WriteLn(error);
-   exit(code);
+void fail (const String & error, int code = 1)
+{
+   WriteLn (error);
+   exit (code);
 }
 
-void normalizeFile(String fileName) {
-   IXMLDOMDocument2Ptr doc = CreateOleObject("MSXML2.DOMDocument.3.0");
-   doc->load(Variant(fileName));
-   if (doc->parseError->errorCode) {
-      fail(String("Parse error: ") + doc->parseError->get_reason());
+void normalizeFile (String fileName)
+{
+   IXMLDOMDocument2Ptr doc = CreateOleObject ("MSXML2.DOMDocument.3.0");
+   doc->load (Variant (fileName));
+   if (doc->parseError->errorCode)
+   {
+      fail (String ("Parse error: ") + doc->parseError->get_reason());
    }
-   normalizeItemGroup(doc);
-   doc->save(Variant(fileName));
+   normalizeItemGroup (doc);
+   doc->save (Variant (fileName));
 }
 
-void normalizeFiles(TStringList & files) {
-   if (files.Count == 0) {
-      fail("No files found", 2);
+void normalizeFiles (TStringList & files)
+{
+   if (files.Count == 0)
+   {
+      fail ("No files found", 2);
    }
 
-   for (int i = 0; i < files.Count; i++) {
+   for (int i = 0; i < files.Count; i++)
+   {
       String file = files[i];
-      WriteLn(makeRelativePath(file));
-      normalizeFile(files[i]);
+      WriteLn (makeRelativePath (file));
+      normalizeFile (files[i]);
    }
 }
 
-std::auto_ptr<TStringList>filesFromCommandLine(new TStringList());
+std::auto_ptr<TStringList>filesFromCommandLine (new TStringList());
 
-void addFiles(int argc, _TCHAR * argv[], int startIdx) {
-   for (int i = startIdx; i < argc; i++) {
+void addFiles (int argc, _TCHAR * argv[], int startIdx)
+{
+   for (int i = startIdx; i < argc; i++)
+   {
       String file = argv[i];
-      filesFromCommandLine->Add(file);
+      filesFromCommandLine->Add (file);
    }
 }
 
-void findFilesInFolder(const String & folder, const String & mask, TStringList & list) {
+void findFilesInFolder (const String & folder, const String & mask, TStringList & list)
+{
    int attr = faAnyFile;
    TSearchRec sr;
-   memset(&sr, 0, sizeof(sr));
-   String dir = IncludeTrailingBackslash(folder);
-   if (FindFirst(dir + mask, attr, sr) == 0) {
-      do {
-         if ((sr.Attr & attr) == sr.Attr) {
-            list.Add(dir + sr.Name);
+   memset (&sr, 0, sizeof (sr));
+   String dir = IncludeTrailingBackslash (folder);
+   if (FindFirst (dir + mask, attr, sr) == 0)
+   {
+      do
+      {
+         if ( (sr.Attr & attr) == sr.Attr)
+         {
+            list.Add (dir + sr.Name);
          }
       }
-      while (FindNext(sr) == 0);
-      FindClose(sr);
+      while (FindNext (sr) == 0);
+      FindClose (sr);
    }
 }
 
-void findFilesRecursively(const String & rootFolder, const String & mask, TStringList & list) {
-   String baseFolder = IncludeTrailingBackslash(rootFolder);
-   findFilesInFolder(baseFolder, mask, list);
+void findFilesRecursively (const String & rootFolder, const String & mask, TStringList & list)
+{
+   String baseFolder = IncludeTrailingBackslash (rootFolder);
+   findFilesInFolder (baseFolder, mask, list);
 
    int attr = faDirectory | faReadOnly;
    TSearchRec sr;
-   memset(&sr, 0, sizeof(sr));
-   if (FindFirst(baseFolder + "*", attr, sr) == 0) {
-      do {
-         if ((sr.Attr & attr) == sr.Attr) {
+   memset (&sr, 0, sizeof (sr));
+   if (FindFirst (baseFolder + "*", attr, sr) == 0)
+   {
+      do
+      {
+         if ( (sr.Attr & attr) == sr.Attr)
+         {
             String subFolder = sr.Name;
             if (subFolder != "." && subFolder != "..")
-               findFilesRecursively(baseFolder + subFolder, mask, list);
+               findFilesRecursively (baseFolder + subFolder, mask, list);
          }
       }
-      while (FindNext(sr) == 0);
-      FindClose(sr);
+      while (FindNext (sr) == 0);
+      FindClose (sr);
    }
 }
 
-void findFiles(const String & folder, const String & mask, TStringList & list, bool recurse) {
-   if (recurse) {
-      findFilesRecursively(folder, mask, list);
-   } else {
-      findFilesInFolder(folder, mask, list);
+void findFiles (const String & folder, const String & mask, TStringList & list, bool recurse)
+{
+   if (recurse)
+   {
+      findFilesRecursively (folder, mask, list);
+   }
+   else
+   {
+      findFilesInFolder (folder, mask, list);
    }
 }
 
-void gatherFiles(TStringList & files, bool recurse) {
-   for (int i = 0; i < filesFromCommandLine->Count; i++) {
-      String path = (*filesFromCommandLine)[i];
-      String folder = ExtractFilePath(path);
+void gatherFiles (TStringList & files, bool recurse)
+{
+   for (int i = 0; i < filesFromCommandLine->Count; i++)
+   {
+      String path = (*filesFromCommandLine) [i];
+      String folder = ExtractFilePath (path);
       if (folder.Length() == 0)
          folder = GetCurrentDir();
-      String file = ExtractFileName(path);
-      findFiles(folder, file, files, recurse);
+      String file = ExtractFileName (path);
+      findFiles (folder, file, files, recurse);
    }
 }
 
@@ -262,54 +306,61 @@ const char * SHORT_OPTIONS = "rhv";
 
 bool recurse = false;
 
-String getProgName() {
-   return ChangeFileExt(ExtractFileName(Application->ExeName), "");
+String getProgName()
+{
+   return ChangeFileExt (ExtractFileName (Application->ExeName), "");
 }
 
-void showUsage() {
-   WriteLn("Usage: " + getProgName() + " [OPTIONS] FILES");
-   WriteLn("Valid options:");
-   WriteLn("  -h, --help                  Show this information and exit");
-   WriteLn("  -r, --recursive             Recurse into subdirectories");
-   WriteLn("  -v, --version               Show version information and exit");
+void showUsage()
+{
+   WriteLn ("Usage: " + getProgName() + " [OPTIONS] FILES");
+   WriteLn ("Valid options:");
+   WriteLn ("  -h, --help                  Show this information and exit");
+   WriteLn ("  -r, --recursive             Recurse into subdirectories");
+   WriteLn ("  -v, --version               Show version information and exit");
 }
 
-void showVersion() {
-   WriteLn(getProgName() + " version " + VERSION);
-   exit(0);
+void showVersion()
+{
+   WriteLn (getProgName() + " version " + VERSION);
+   exit (0);
 }
 
-void processOptions(int argc, _TCHAR * argv[]) {
+void processOptions (int argc, _TCHAR * argv[])
+{
    int idx = 0;
    int c = 0;
-   while (c >= 0) {
-      c = getopt_long(argc, argv, SHORT_OPTIONS, LONG_OPTIONS, &idx);
-      switch(c) {
-      case -1
-         : addFiles(argc, argv, optind);
-         break;
-      case 'r':
-         recurse = true;
-         break;
-      case 'h':
-         showUsage();
-         exit(0);
-      case 'v':
-         showVersion();
-         exit(0);
+   while (c >= 0)
+   {
+      c = getopt_long (argc, argv, SHORT_OPTIONS, LONG_OPTIONS, &idx);
+      switch (c)
+      {
+         case -1
+               :
+            addFiles (argc, argv, optind);
+            break;
+         case 'r':
+            recurse = true;
+            break;
+         case 'h':
+            showUsage();
+            exit (0);
+         case 'v':
+            showVersion();
+            exit (0);
       }
    }
 }
 
 static COMHelper comHelper;
 
-int _tmain(int argc, _TCHAR* argv[]) {
+int _tmain (int argc, _TCHAR * argv[])
+{
+   processOptions (argc, argv);
 
-   processOptions(argc, argv);
-
-   std::auto_ptr<TStringList>filesToNormalize(new TStringList());
-   gatherFiles(*filesToNormalize, recurse);
-   normalizeFiles(*filesToNormalize);
+   std::auto_ptr<TStringList>filesToNormalize (new TStringList());
+   gatherFiles (*filesToNormalize, recurse);
+   normalizeFiles (*filesToNormalize);
 
    return 0;
 }
