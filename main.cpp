@@ -77,7 +77,7 @@ void WriteLn (const String & s)
 {
    static HANDLE handle = allocHandle();
    String out = s + "\n";
-   WriteConsole (handle, out.t_str(), out.Length(), 0, 0);
+   WriteConsoleW(handle, out.c_str(), out.Length(), 0, 0);
 }
 
 BSTR getAttribute (IXMLDOMNodePtr node, BSTR attrName)
@@ -87,15 +87,22 @@ BSTR getAttribute (IXMLDOMNodePtr node, BSTR attrName)
 
 BSTR getNodeText (IXMLDOMNodePtr node, BSTR nodeName)
 {
-   return node->selectSingleNode (nodeName)->text;
+   IXMLDOMNodePtr s = node->selectSingleNode(nodeName);
+   return s ? s->text : 0;
+}
+
+int getNodeInt (IXMLDOMNodePtr node, BSTR nodeName, int default_value = -1) 
+{
+	IXMLDOMNodePtr s = node->selectSingleNode(nodeName);
+   return s ? StrToInt(s->text) : default_value;
 }
 
 int compareNodes (IXMLDOMNodePtr node1, IXMLDOMNodePtr node2)
 {
    String name1 = getAttribute (node1, L"Include");
-   int order1 = StrToInt (getNodeText (node1, L"BuildOrder"));
+   int order1 = getNodeInt(node1, L"BuildOrder");
    String name2 = getAttribute (node2, L"Include");
-   int order2 = StrToInt (getNodeText (node2, L"BuildOrder"));
+   int order2 = getNodeInt(node2, L"BuildOrder");
 
    if (order1 > order2)
       return 1;
@@ -135,11 +142,11 @@ void bubbleSortNodes (IXMLDOMNodePtr * nodes, int len)
 
 String makeRelativePath (String path)
 {
-   char buffer[MAX_PATH] =
+   wchar_t buffer[MAX_PATH] = 
    {
       0
    };
-   if (PathRelativePathTo (buffer, GetCurrentDir().t_str(), FILE_ATTRIBUTE_DIRECTORY, path.t_str(), 0))
+   if (PathRelativePathToW(buffer, GetCurrentDir().c_str(), FILE_ATTRIBUTE_DIRECTORY, path.c_str(), 0))
       return String (buffer);
    else
       return path;
@@ -169,7 +176,7 @@ void rewriteNodes (IXMLDOMNodePtr parent, IXMLDOMNodePtr * nodes, int len)
 void normalizeItemGroup (IXMLDOMDocument2Ptr doc)
 {
    IXMLDOMNodePtr itemGroup = doc->selectSingleNode (L"/Project/ItemGroup");
-   IXMLDOMNodeListPtr items = itemGroup->selectNodes (L"*[BuildOrder and @Include]");
+   IXMLDOMNodeListPtr items = itemGroup->selectNodes (L"*[@Include]");
    if (items && items->length)
    {
       int len;
@@ -213,7 +220,7 @@ void normalizeFiles (TStringList & files)
    }
 }
 
-std::auto_ptr<TStringList>filesFromCommandLine (new TStringList());
+std::unique_ptr<TStringList>filesFromCommandLine (new TStringList);
 
 void addFiles (int argc, _TCHAR * argv[], int startIdx)
 {
@@ -374,7 +381,7 @@ int _tmain (int argc, _TCHAR * argv[])
 {
    processOptions (argc, argv);
 
-   std::auto_ptr<TStringList>filesToNormalize (new TStringList());
+   std::unique_ptr<TStringList>filesToNormalize (new TStringList);
    gatherFiles (*filesToNormalize, recurse);
    normalizeFiles (*filesToNormalize);
 
