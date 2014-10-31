@@ -26,6 +26,10 @@
 #include <list>
 #include <memory>
 
+#include <string>
+#include <iostream>
+#include <vector>
+
 #include <shlwapi.h>
 #undef StrToInt
 
@@ -186,15 +190,20 @@ void fail (const String & error, int code = 1)
    exit (code);
 }
 
-void normalizeFile (String fileName)
+void normalizeDoc (IXMLDOMDocument2Ptr doc)
 {
-   IXMLDOMDocument2Ptr doc = CreateOleObject ("MSXML2.DOMDocument.3.0");
-   doc->load (Variant (fileName));
    if (doc->parseError->errorCode)
    {
       fail (String ("Parse error: ") + doc->parseError->get_reason());
    }
    normalizeItemGroup (doc);
+}
+
+void normalizeFile (String fileName)
+{
+   IXMLDOMDocument2Ptr doc = CreateOleObject ("MSXML2.DOMDocument.3.0");
+   doc->load (Variant (fileName));
+   normalizeDoc(doc);
    doc->save (Variant (fileName));
 }
 
@@ -211,6 +220,30 @@ void normalizeFiles (TStringList & files)
       WriteLn (makeRelativePath (file));
       normalizeFile (files[i]);
    }
+}
+
+void normalizeStdin (void)
+{
+   std::istreambuf_iterator<wchar_t> eos;
+   std::istreambuf_iterator<wchar_t> iit (std::wcin);
+
+   std::vector<wchar_t> input(iit, eos);
+   input.push_back('\0');
+
+   if (verbose)
+   {
+      WriteLn("Input Received:");
+      WriteLn(&input[0]);
+   }
+
+   // check for and remove UTF-8 BOM
+   if (input.size() > 3 && input[0] == 0xEF && input[1] == 0xBB && input[2] == 0xBF)
+      input.erase(input.begin(), input.begin()+3);
+
+   IXMLDOMDocument2Ptr doc = CreateOleObject ("MSXML2.DOMDocument.3.0");
+   doc->loadXML(&input[0]);
+   normalizeDoc(doc);
+   std::wcout << doc->xml;
 }
 
 std::auto_ptr<TStringList>filesFromCommandLine (new TStringList());
@@ -307,6 +340,7 @@ const struct option LONG_OPTIONS[] = { {
    }, {
       "help", no_argument, 0, 'h'
    }, {
+      "filter", no_argument, 0, 'f'
    }, {
       "verbose", no_argument, 0, 'V'
    }, {
@@ -314,9 +348,11 @@ const struct option LONG_OPTIONS[] = { {
    }
 };
 
-const char * SHORT_OPTIONS = "rhvV";
+const char * SHORT_OPTIONS = "rhvfV";
 
 bool recurse = false;
+
+bool filter = false;
 
 String getProgName()
 {
@@ -329,6 +365,7 @@ void showUsage()
    WriteLn ("Valid options:");
    WriteLn ("  -h, --help                  Show this information and exit");
    WriteLn ("  -r, --recursive             Recurse into subdirectories");
+   WriteLn ("  -f, --filter                Read input from stdin and write to stdout");
    WriteLn ("  -v, --version               Show version information and exit");
    WriteLn ("  -V, --verbose               Show more output during processing");
 }
@@ -348,9 +385,12 @@ void processOptions (int argc, _TCHAR * argv[])
       c = getopt_long (argc, argv, SHORT_OPTIONS, LONG_OPTIONS, &idx);
       switch (c)
       {
-         case -1
-               :
-            addFiles (argc, argv, optind);
+         case -1:
+            if (!filter)
+               addFiles (argc, argv, optind);
+            break;
+         case 'f':
+            filter = true;
             break;
          case 'r':
             recurse = true;
@@ -374,9 +414,19 @@ int _tmain (int argc, _TCHAR * argv[])
 {
    processOptions (argc, argv);
 
-   std::auto_ptr<TStringList>filesToNormalize (new TStringList());
-   gatherFiles (*filesToNormalize, recurse);
-   normalizeFiles (*filesToNormalize);
+   if(filter && recurse)
+      fail("Cannot specify both recursive and filter.");
+
+   if(!filter)
+   {
+      std::auto_ptr<TStringList>filesToNormalize (new TStringList());
+      gatherFiles (*filesToNormalize, recurse);
+      normalizeFiles (*filesToNormalize);
+   }
+   else
+   {
+      normalizeStdin();
+   }
 
    return 0;
 }
